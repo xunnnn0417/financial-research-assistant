@@ -1,53 +1,92 @@
 # Financial Research Assistant
 
-A small, explainable web application for market research. Enter a symbol such as `AAPL`, `NVDA`, or `XAUUSD`; the browser calls a FastAPI endpoint, which fetches, normalizes, validates, and returns recent market data. It is a research tool, **not** a trading bot: it does not issue Buy/Sell signals or price targets.
+一個小型的金融市場研究工具。使用者輸入 `AAPL`、`NVDA` 或 `XAUUSD` 後，前端會呼叫 FastAPI backend；backend 再向外部市場資料來源取得資料，整理成固定格式、驗證後回傳給網頁。
+
+目前版本重點是把一條完整的資料流程做通：
+
+```text
+Browser (HTML / CSS / JavaScript)
+        ↓ GET /api/research/{symbol}
+FastAPI backend
+        ↓
+MarketDataProvider
+        ↓
+Yahoo Finance public chart endpoint
+        ↓
+Normalize market data
+        ↓
+Pydantic validation
+        ↓
+JSON response
+        ↓
+Browser
+```
+
+這個專案是研究工具，不會產生 Buy / Sell、進場價、停損或目標價。
 
 ## Demo
 
-Run the server and open `http://127.0.0.1:8000`. The FastAPI interactive docs are at `/docs`.
+<img src="https://raw.githubusercontent.com/xunnnn0417/financial-research-assistant/main/docs/images/03-result.png" alt="Financial Research Assistant result" width="900">
 
-![Successful AAPL research result](docs/images/03-result.png)
+## 目前功能
 
-![Test result](docs/images/05-terminal-test.png)
+- 查詢最新可取得的市場價格與漲跌幅
+- 顯示最近 5 根日線 OHLC
+- 以固定格式回傳 JSON
+- 使用 Pydantic 驗證 API response
+- 處理 invalid symbol、provider failure、rate limit 等錯誤
+- 透過 `MarketDataProvider` 隔離外部資料來源
+- `XAUUSD` 會轉成 Yahoo 使用的 `XAUUSD=X`
+- GitHub Actions 自動執行 lint 與 tests
 
-## Features
+## Tech Stack
 
-- Latest available price and percentage change
-- Five recent daily OHLC candles
-- Deterministic, descriptive market summary
-- Public JSON API with Pydantic response validation
-- Safe errors for invalid symbols, timeouts, and rate limits
-- Explicit `fetched_at` timestamp so retrieval time is not confused with a market timestamp
-- `XAUUSD` maps explicitly to Yahoo Finance's `XAUUSD=X` when the provider makes it available
+- Python / FastAPI / Uvicorn
+- Pydantic / HTTPX
+- HTML / CSS / Vanilla JavaScript
+- pytest / Ruff / GitHub Actions
 
-## Architecture and data flow
+## API
 
-```mermaid
-flowchart LR
-  B[Browser: HTML/CSS/JS] -->|GET /api/research/SYMBOL| A[FastAPI]
-  A --> P[MarketDataProvider]
-  P --> Y[Yahoo Finance public chart endpoint]
-  Y --> N[Normalize OHLC data]
-  N --> V[Pydantic ResearchResponse]
-  V --> B
+| Method | Endpoint | 用途 |
+| --- | --- | --- |
+| `GET` | `/health` | 確認 backend 是否正常運作 |
+| `GET` | `/api/research/{symbol}` | 查詢並回傳整理後的市場資料 |
+
+成功回應會包含：
+
+```json
+{
+  "symbol": "AAPL",
+  "provider_symbol": "AAPL",
+  "price": 123.45,
+  "change_percent": 1.2,
+  "ohlc": [],
+  "summary": "...",
+  "source": "Yahoo Finance (public chart endpoint)",
+  "fetched_at": "..."
+}
 ```
 
-`YahooProvider` was selected because its public chart endpoint works without an API key for a learning V1 and supports common equities. It is an external, unofficially stable dependency: availability and rate limits can change. The small `MarketDataProvider` interface makes replacement straightforward. V1 needs no API key; `.env.example` reserves a future LLM configuration location.
+## Project Structure
 
-## Tech stack
+```text
+backend/
+  main.py              FastAPI routes
+  schemas.py           Pydantic response models
+  providers/           外部市場資料來源
+  services/            資料整理與 research logic
 
-Python, FastAPI, Uvicorn, Pydantic, HTTPX, pytest, HTML, CSS, and vanilla JavaScript.
+frontend/
+  index.html
+  styles.css
+  app.js
 
-## API endpoints
+tests/
+  API / schema / error-path tests
+```
 
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /health` | Confirm the server is running |
-| `GET /api/research/{symbol}` | Return validated research JSON |
-
-Errors use a safe `{detail, code}` body. The app distinguishes invalid symbols (400), provider failure (502), and provider rate limit (503).
-
-## How to run
+## Run Locally
 
 ```powershell
 python -m venv .venv
@@ -56,43 +95,30 @@ pip install -r requirements.txt
 uvicorn backend.main:app --reload
 ```
 
-Then open `http://127.0.0.1:8000`. If Windows does not recognize `python`, install Python 3.11+ and reopen the terminal. In this Codex workspace, use the supplied Python runtime instead.
+打開：`http://127.0.0.1:8000`
 
-## Testing
+FastAPI 文件：`http://127.0.0.1:8000/docs`
+
+## Tests
 
 ```powershell
 pytest
 ruff check .
 ```
 
-The tests cover the health endpoint, success contract, and safe error responses through fake providers (so unit tests do not depend on external market availability). Use the browser/API requests for the live integration check.
-
-When this repository is published on GitHub, `.github/workflows/ci.yml` runs the same lint and test checks for every push and pull request. This keeps the small V1 honest without adding a heavy deployment stack.
-
-## Project structure
-
-```text
-backend/       FastAPI app, schemas, provider, service
-frontend/      Browser UI
-tests/         Fast unit tests
-docs/          tutorial, resume notes, verified screenshots
-```
+單元測試使用 fake provider，避免每次測試都依賴外部網路；live market data 則另外做 integration check。
 
 ## Limitations
 
-- Latest values depend on the provider and can be delayed, unavailable, or rate-limited.
-- Yahoo ticker conventions vary; `XAUUSD` is explicitly mapped but should be treated as an FX reference, not a guaranteed spot feed.
-- No news, citations, LLM analysis, authentication, persistence, or trading functionality.
+- Yahoo Finance public endpoint 可能延遲、限流或改變格式。
+- `XAUUSD=X` 是 Yahoo 的 ticker convention，不代表 institutional-grade spot feed。
+- 目前沒有新聞、LLM summary、登入、資料庫或交易功能。
 
-## Future work
+## Next
 
-- V2: optional LLM API, inserted behind the existing summary function.
-- V3: financial news with source citations.
-- V4: Prompt Lab for research prompts.
-- V5: prompt version comparison.
-- V6: AI response schema validation.
+下一版預計加入：
 
-## Learning and design decisions
-
-The app deliberately favors readable functions over frameworks and elaborate patterns. Provider output is normalized before `ResearchResponse` validation, so the frontend receives one stable shape even if provider payload details differ.
-
+- 有來源引用的 financial news
+- LLM research summary
+- Prompt testing / version comparison
+- AI response schema validation
