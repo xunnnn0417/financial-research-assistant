@@ -14,7 +14,7 @@ class MarketSnapshot:
     price: float
     previous_close: float
     candles: list[dict]
-    updated_at: datetime
+    fetched_at: datetime
 
 
 class MarketDataProvider(ABC):
@@ -25,3 +25,4 @@ class MarketDataProvider(ABC):
     @abstractmethod
     async def fetch_daily_data(self, symbol: str) -> MarketSnapshot:
         """Fetch, normalize, and return daily data for one user-facing symbol."""
+

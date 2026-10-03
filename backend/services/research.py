@@ -28,5 +28,6 @@ async def research_symbol(symbol: str, provider: MarketDataProvider) -> Research
         ohlc=ohlc,
         summary=build_market_summary(change_percent, ohlc[-1].close, ohlc[0].close),
         source=provider.name,
-        updated_at=snapshot.updated_at,
+        fetched_at=snapshot.fetched_at,
     )
+

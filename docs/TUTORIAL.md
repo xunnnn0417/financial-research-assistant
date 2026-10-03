@@ -6,7 +6,11 @@ This is a guided rebuild of the reference project. Read it with the project open
 
 ![Initial page](images/01-home.png)
 
+![Symbol ready to research](images/02-search-aapl.png)
+
 ![Successful AAPL result](images/03-result.png)
+
+![FastAPI interactive API documentation](images/04-api-docs.png)
 
 ![Actual pytest output from the reference build](images/05-terminal-test.png)
 
@@ -66,6 +70,8 @@ const payload = await response.json();
 
 `fetch()` asks the browser to make a request. `await` waits without freezing the page. `encodeURIComponent` makes input safe to place in a URL. `response.json()` converts JSON text into a JavaScript object. The UI checks `response.ok` so errors become readable text.
 
+![Enter AAPL and press Research](images/02-search-aapl.png)
+
 The backend serves this frontend from the same `http://127.0.0.1:8000` origin. That avoids a beginner-unfriendly CORS configuration.
 
 ### Checkpoint
@@ -84,7 +90,9 @@ Yahoo returns timestamps plus parallel arrays such as `open`, `high`, `low`, and
 `XAUUSD` is mapped to `XAUUSD=X` in `SYMBOL_ALIASES`; this is a provider convention, not a universal finance rule. If Yahoo returns no data for it, the UI intentionally reports an unavailable-symbol error rather than substituting a different gold instrument.
 
 **Run:** visit `/api/research/AAPL` or `/docs` and use “Try it out.”  
-**Expected:** A JSON object with `price`, `change_percent`, `ohlc`, `summary`, `source`, and UTC `updated_at`.
+**Expected:** A JSON object with `price`, `change_percent`, `ohlc`, `summary`, `source`, and UTC `fetched_at`. `fetched_at` means when this app retrieved the provider response; it is not a claim about the market's own last-update timestamp.
+
+![Try the endpoint in FastAPI's generated docs](images/04-api-docs.png)
 
 ## Step 5 — Normalize, validate, and summarize
 
@@ -110,6 +118,8 @@ Q2: Why use Pydantic?
 **Why:** A visitor should see “symbol unavailable” or “try again later,” not a Python traceback.
 
 Try a clearly nonexistent symbol, e.g. `/api/research/NOTAREALMARKET123`. The backend maps errors to 400, 502, or 503. The JavaScript `catch` displays the server message.
+
+![A successful browser result includes the fetched time and provider source](images/03-result.png)
 
 ## Step 7 — Test it
 
@@ -149,3 +159,4 @@ Read `git status` before every commit. `.gitignore` excludes `.env` and `.venv`.
 1. Run the reference project unchanged and call `/health`.
 2. Trace one AAPL request in `app.js`, `main.py`, `market_data.py`, and `research.py`.
 3. Change only the page subtitle, rerun it, and commit that small change.
+

@@ -27,7 +27,7 @@ class ResearchResponse(BaseModel):
     ohlc: list[OhlcCandle] = Field(min_length=1, max_length=10)
     summary: str
     source: str
-    updated_at: datetime
+    fetched_at: datetime
 
 
 class ErrorResponse(BaseModel):
@@ -35,3 +35,4 @@ class ErrorResponse(BaseModel):
 
     detail: str
     code: Literal["invalid_symbol", "provider_unavailable", "provider_rate_limited"]
+

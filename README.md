@@ -17,6 +17,7 @@ Run the server and open `http://127.0.0.1:8000`. The FastAPI interactive docs ar
 - Deterministic, descriptive market summary
 - Public JSON API with Pydantic response validation
 - Safe errors for invalid symbols, timeouts, and rate limits
+- Explicit `fetched_at` timestamp so retrieval time is not confused with a market timestamp
 - `XAUUSD` maps explicitly to Yahoo Finance's `XAUUSD=X` when the provider makes it available
 
 ## Architecture and data flow
@@ -64,7 +65,7 @@ pytest
 ruff check .
 ```
 
-The tests cover the health endpoint and schema creation through a fake provider (so unit tests do not depend on external market availability). Use the browser/API requests for the live integration check.
+The tests cover the health endpoint, success contract, and safe error responses through fake providers (so unit tests do not depend on external market availability). Use the browser/API requests for the live integration check.
 
 When this repository is published on GitHub, `.github/workflows/ci.yml` runs the same lint and test checks for every push and pull request. This keeps the small V1 honest without adding a heavy deployment stack.
 
